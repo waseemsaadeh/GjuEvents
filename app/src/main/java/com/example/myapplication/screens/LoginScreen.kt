@@ -1,16 +1,24 @@
 package com.example.myapplication.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -60,104 +68,215 @@ fun LoginScreen(
         }
     }
 
-    val primaryBlue = Color(0xFF1F6BAD)
-
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.avatar),
-            contentDescription = "Profile",
-            modifier = Modifier
-                .size(184.dp)
-                .clip(CircleShape)
-        )
-
-        OutlinedTextField(
-            value = login_email,
-            onValueChange = { login_email = it },
-            label = { Text("Email") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-            ,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedBorderColor = primaryBlue,
-                focusedLabelColor = primaryBlue,
-                unfocusedBorderColor = Color(0xFF1F6BAD),
-                cursorColor = primaryBlue
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        MaterialTheme.colorScheme.surface,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    )
+                )
             )
-        )
-
-        OutlinedTextField(
-            value = login_password,
-            onValueChange = { login_password = it },
-            label = { Text("Password") },
-            singleLine = true,
-            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+    ) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-            ,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            trailingIcon = {
-                val icon = if (passwordVisible)
-                    painterResource(id = R.drawable.visibility_on)
-                else
-                    painterResource(id = R.drawable.visibility_off)
-
-                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                    Icon(
-                        painter = icon,
-                        contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                .fillMaxSize()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Welcome Section
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(120.dp)
+                        .shadow(
+                            elevation = 8.dp,
+                            shape = CircleShape,
+                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                        )
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(20.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.img),
+                        contentDescription = "App Logo",
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-            },
-            colors = TextFieldDefaults.outlinedTextFieldColors(
-                focusedBorderColor = Color(0xFF1F6BAD),
-                focusedLabelColor = primaryBlue,
-                cursorColor = primaryBlue,
-                unfocusedBorderColor = Color(0xFF1F6BAD)
-            )
-        )
 
-        Text(
-            text = "Forgot Password",
-            modifier = Modifier
-                .align(Alignment.End)
-                .clickable {
-                    val intent = Intent(context, Forgot_pass_Activity::class.java)
-                    context.startActivity(intent)
-                },
-            color = primaryBlue,
-            textAlign = TextAlign.Center
-        )
+                Text(
+                    text = "Welcome Back!",
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-        Button(
-            onClick = { loginViewModel.login(login_email, login_password) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp),
-            shape = MaterialTheme.shapes.extraLarge,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = primaryBlue,
-                contentColor = Color.White
-            )
-        ) {
-            Text("Login")
+                Text(
+                    text = "Sign in to continue to your account",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Login Form Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(24.dp),
+                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    ),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
+                ) {
+                    // Email Field
+                    OutlinedTextField(
+                        value = login_email,
+                        onValueChange = { login_email = it },
+                        label = { Text("Email Address") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Email,
+                                contentDescription = "Email",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            cursorColor = MaterialTheme.colorScheme.primary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    // Password Field
+                    OutlinedTextField(
+                        value = login_password,
+                        onValueChange = { login_password = it },
+                        label = { Text("Password") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = "Password",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        trailingIcon = {
+                            val icon = if (passwordVisible)
+                                painterResource(id = R.drawable.visibility_on)
+                            else
+                                painterResource(id = R.drawable.visibility_off)
+
+                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    painter = icon,
+                                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        colors = TextFieldDefaults.outlinedTextFieldColors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            cursorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    // Forgot Password
+                    Text(
+                        text = "Forgot Password?",
+                        modifier = Modifier
+                            .align(Alignment.End)
+                            .clickable {
+                                val intent = Intent(context, Forgot_pass_Activity::class.java)
+                                context.startActivity(intent)
+                            },
+                        color = MaterialTheme.colorScheme.primary,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+
+                    // Login Button
+                    Button(
+                        onClick = { loginViewModel.login(login_email, login_password) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = RoundedCornerShape(16.dp),
+                                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                            ),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(
+                            "Sign In",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Sign Up Link
+            Row(
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Don't have an account? ",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Sign Up",
+                    modifier = Modifier.clickable {
+                        val intent = Intent(context, Signup_Activity::class.java)
+                        context.startActivity(intent)
+                    },
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
         }
-
-        Text(
-            text = "Don't have an account? Sign Up",
-            modifier = Modifier.clickable {
-                val intent = Intent(context, Signup_Activity::class.java)
-                context.startActivity(intent)
-            },
-            color = primaryBlue
-        )
     }
 }

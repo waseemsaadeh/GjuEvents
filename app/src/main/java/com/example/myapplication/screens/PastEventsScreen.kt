@@ -7,8 +7,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.example.myapplication.viewmodels.EventViewModel
@@ -28,6 +31,7 @@ fun PastEventsScreen(navController: NavHostController, viewModel: EventViewModel
                 event.attendedStudents.contains(currentUser?.email ?: "")
     }
 
+    // Make Scaffold background transparent to show the gradient
     Scaffold(
         topBar = {
             TopAppBar(
@@ -42,42 +46,82 @@ fun PastEventsScreen(navController: NavHostController, viewModel: EventViewModel
                         )
                     }
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
             )
-        }
-    ) { padding ->
-        Column(
+        },
+        containerColor = Color.Transparent  // Match UserHomePage styling
+    ) { innerPadding ->
+        LazyColumn(
             modifier = Modifier
-                .padding(padding)
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(innerPadding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp) // Match UserHomePage spacing
         ) {
-            if (finishedAttendedEvents.isEmpty()) {
-                Text("No finished events found.", style = MaterialTheme.typography.bodyLarge)
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Header Section - similar to UserHomePage sections
+            item {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 ) {
-                    items(finishedAttendedEvents) { event ->
-                        val isEnrolled = viewModel.isUserEnrolled(event)
-                        PastEventItemUser(
-                            event = event,
-                            onEnrollClick = {
-                                val newEnrollmentState = !isEnrolled
-                                if (newEnrollmentState) {
-                                    viewModel.enrollToEvent(event.title, context)
-                                } else {
-                                    viewModel.unenrollFromEvent(event.title, context)
-                                }
-                            },
-                            onCardClick = {
-                                navController.navigate("user_event_details/${event.title}")
-                            },
-                            isEnrolled = isEnrolled
+                    Text(
+                        text = "📚 Finished Events",
+                        style = MaterialTheme.typography.headlineSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        "${finishedAttendedEvents.size} events",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+            }
+
+            if (finishedAttendedEvents.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No finished events found.",
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         )
                     }
+                }
+            } else {
+                items(finishedAttendedEvents) { event ->
+                    val isEnrolled = viewModel.isUserEnrolled(event)
+                    PastEventItemUser(
+                        event = event,
+                        onEnrollClick = {
+                            val newEnrollmentState = !isEnrolled
+                            if (newEnrollmentState) {
+                                viewModel.enrollToEvent(event.title, context)
+                            } else {
+                                viewModel.unenrollFromEvent(event.title, context)
+                            }
+                        },
+                        onCardClick = {
+                            navController.navigate("user_event_details/${event.title}")
+                        },
+                        isEnrolled = isEnrolled
+                    )
+                    // No extra Spacer needed since we're using verticalArrangement.spacedBy
                 }
             }
         }

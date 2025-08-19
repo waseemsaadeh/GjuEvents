@@ -20,10 +20,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import android.provider.Settings
 import com.example.myapplication.components.EventReminderReceiver
+import java.util.Calendar
 
 data class User(
     val id: String = "",
@@ -31,7 +31,6 @@ data class User(
     val email: String = "",
     val isAdmin: Boolean = false
 )
-
 
 class EventViewModel() : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
@@ -43,6 +42,7 @@ class EventViewModel() : ViewModel() {
     fun getEventById(eventId: String): Event? {
         return _events.value.find { it.id == eventId }
     }
+
     fun getEventByTitle(title: String): Event? {
         return _events.value.find { it.title == title }
     }
@@ -64,10 +64,9 @@ class EventViewModel() : ViewModel() {
             }
         }
     }
+
     private val _enrolledEvents = MutableStateFlow<List<Event>>(emptyList())
     val enrolledEvents: StateFlow<List<Event>> = _enrolledEvents.asStateFlow()
-
-
 
     private val _currentUser = MutableStateFlow(
         User(
@@ -79,22 +78,108 @@ class EventViewModel() : ViewModel() {
     val currentUser: StateFlow<User> = _currentUser.asStateFlow()
 
     private val auth = FirebaseAuth.getInstance()
+
     init {
         fetchEventsRealTime() // Start listening for data changes
     }
+
     private fun fetchEventsRealTime() {
         db.collection("events")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) return@addSnapshotListener
 
-                snapshot?.documents?.mapNotNull { doc ->
-                    doc.toObject(Event::class.java)
-                }?.let { eventsList ->
-                    _events.value = eventsList  // Update _events instead of events
-                    loadEnrolledEventsFromLocalEvents()
+                val eventsList = snapshot?.documents?.mapNotNull { doc ->
+                    doc.toObject(Event::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+
+                // Add popularity predictions
+                val eventsWithPredictions = eventsList.map { event ->
+                    event.copy(predictedPopular = predictPopularity(event, eventsList))
                 }
+
+                _events.value = eventsWithPredictions
+                loadEnrolledEventsFromLocalEvents()
             }
     }
+
+    private fun predictPopularity(event: Event, allEvents: List<Event>): Boolean {
+        // 1. Category popularity (with default for new categories)
+        val categoryScore = if (event.categories.isNotEmpty()) {
+            event.categories.map { category ->
+                val categoryEvents = allEvents.filter {
+                    it.categories.contains(category) &&
+                            it.id != event.id
+                }
+
+                if (categoryEvents.isEmpty()) {
+                    // Default score for new categories
+                    5.0
+                } else {
+                    categoryEvents.map { it.enrolledStudents.size }
+                        .average()
+                        .takeIf { !it.isNaN() } ?: 0.0
+                }
+            }.average()
+        } else 3.0 // Default for uncategorized events
+
+        // 2. Organizer popularity (with default for new organizers)
+        val organizerScore = if (event.organizerId.isNotEmpty()) {
+            val organizerEvents = allEvents.filter {
+                it.organizerId == event.organizerId &&
+                        it.id != event.id
+            }
+
+            if (organizerEvents.isEmpty()) {
+                // Default score for new organizers
+                5.0
+            } else {
+                organizerEvents.map { it.enrolledStudents.size }
+                    .average()
+                    .takeIf { !it.isNaN() } ?: 0.0
+            }
+        } else 3.0 // Default for unknown organizers
+
+        // 3. Time popularity (prime time bonus)
+        val timeScore = try {
+            when (event.time.take(2).toInt()) {
+                in 17..20 -> 1.5  // Evening events get boost
+                in 12..14 -> 1.2  // Lunchtime boost
+                else -> 1.0
+            }
+        } catch (e: Exception) { 1.0 }
+
+        // 4. Day of week popularity
+        val dayScore = try {
+            val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            val date = dateFormat.parse(event.date)
+            val calendar = Calendar.getInstance().apply { time = date }
+            when (calendar.get(Calendar.DAY_OF_WEEK)) {
+                Calendar.FRIDAY, Calendar.SATURDAY -> 1.3
+                Calendar.SUNDAY -> 1.2
+                else -> 1.0
+            }
+        } catch (e: Exception) { 1.0 }
+
+        // Add debug logging
+        Log.d("Popularity", "Event: ${event.title}")
+        Log.d("Popularity", "CategoryScore: $categoryScore")
+        Log.d("Popularity", "OrganizerScore: $organizerScore")
+        Log.d("Popularity", "TimeScore: $timeScore")
+        Log.d("Popularity", "DayScore: $dayScore")
+
+        // Weighted scoring
+        val totalScore = (categoryScore * 0.4) + (organizerScore * 0.3) +
+                (timeScore * 0.2) + (dayScore * 0.1)
+
+        Log.d("Popularity", "TotalScore: $totalScore")
+
+        // Lower threshold for better detection
+        val isPopular = totalScore > 1.5
+        Log.d("Popularity", "Popular: $isPopular")
+
+        return isPopular
+    }
+
     fun addEvent(
         event: Event,
         onSuccess: () -> Unit,
@@ -113,6 +198,7 @@ class EventViewModel() : ViewModel() {
             }
         }
     }
+
     fun scheduleEventReminderWithCheck(context: Context, event: Event) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
@@ -160,6 +246,7 @@ class EventViewModel() : ViewModel() {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         alarmManager.cancel(pendingIntent)
     }
+
     fun enrollToEvent(eventId: String,context: Context) {
         viewModelScope.launch {
             val userEmail = currentUser.value.email
@@ -178,7 +265,6 @@ class EventViewModel() : ViewModel() {
                 }
         }
     }
-
 
     fun isUserEnrolled(event: Event): Boolean {
         return event.enrolledStudents.contains(currentUser.value.email)
@@ -216,6 +302,7 @@ class EventViewModel() : ViewModel() {
             _currentUser.value = User() // Reset user
         }
     }
+
     fun unenrollFromEvent(eventId: String,context: Context,onSuccess: () -> Unit = {}) {
         viewModelScope.launch {
             val userEmail = currentUser.value.email
@@ -235,8 +322,8 @@ class EventViewModel() : ViewModel() {
                 }
         }
     }
-
 }
+
 fun isEventInPast(dateString: String, timeString: String): Boolean {
     return try {
         val formatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
